@@ -16,3 +16,15 @@ def users_list(request):
         {'id': 7, 'username': 'Роман Романин', 'email': 'romanroman@gmail.ru', 'last_login': '00.00.0000 00:00'},
     ]
     return render(request, 'adminpanel/users.html', {'users': users})
+
+def complaints_list(request):
+    complaints = [
+        {'id': 1, 'username': 'Анна Иванова', 'email': 'anna@mail.ru', 'description': 'Неподобающая лексика', 'object': 'Имя пользователя'},
+        {'id': 2, 'username': 'Борис Смирнов', 'email': 'boris@gmail.com', 'description': 'Неподобающая лексика', 'object': 'Имя пользователя'},
+        {'id': 3, 'username': 'Виктория Кузнецова', 'email': 'viktoria@ya.ru', 'description': 'Неподобающая лексика', 'object': 'Описание'},
+        {'id': 4, 'username': 'Глеб Петров', 'email': 'gleb@outlook.com', 'description': 'Неподобающая лексика', 'object': 'Имя пользователя'},
+        {'id': 5, 'username': 'Дмитрий Соколов', 'email': 'dmitry@mail.ru', 'description': 'Неподобающая лексика', 'object': 'Описание'},
+        {'id': 6, 'username': 'Екатерина Орлова', 'email': 'ekaterina@gmail.com', 'description': 'Неподобающая лексика', 'object': 'Имя пользователя'},
+        {'id': 7, 'username': 'Роман Романин', 'email': 'romanroman@gmail.ru', 'description': 'Неподобающая лексика', 'object': 'Имя пользователя'},
+    ]
+    return render(request, 'adminpanel/complaints.html', {'complaints': complaints})
