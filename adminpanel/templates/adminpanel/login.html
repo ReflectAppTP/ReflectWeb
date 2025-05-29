@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1440, initial-scale=1.0">
+    <title>Вход администратора | Reflect</title>
+    <style>
+        body {
+            background: #EBFFE5;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+        }
+        .main-frame {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 0 0 0;
+            gap: 24px;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 420px;
+        }
+        .logo {
+            width: 220px;
+            height: 220px;
+            margin-bottom: 24px;
+            border-radius: 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            background: #eafbe6;
+            object-fit: cover;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            width: 100%;
+        }
+        .login-form input {
+            width: 340px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1.5px solid #B2B2B2;
+            font-size: 18px;
+            background: #F6FFF3;
+            outline: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: border 0.2s;
+        }
+        .login-form input:focus {
+            border: 1.5px solid #395c3c;
+        }
+        .login-form button {
+            background: #395c3c;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 0;
+            font-size: 20px;
+            width: 340px;
+            cursor: pointer;
+            margin-top: 8px;
+            box-shadow: 0 2px 8px rgba(57,92,60,0.08);
+            transition: background 0.2s;
+        }
+        .login-form button:hover {
+            background: #2e4a30;
+        }
+    </style>
+</head>
+<body>
+<div class="main-frame">
+    <img src="{% static 'adminpanel/icon.png' %}" alt="Reflect logo" class="logo">
+    <form class="login-form" method="post">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Логин" required>
+        <input type="password" name="password" placeholder="Пароль" required>
+        <button type="submit">Войти</button>
+    </form>
+</div>
+</body>
+</html> 
