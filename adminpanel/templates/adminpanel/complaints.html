@@ -217,6 +217,16 @@
         .complaints-table tr.selected {
             background: #b2d8b2 !important;
         }
+        .status-missing {
+            color: #b30000;
+            font-weight: bold;
+            font-style: italic;
+        }
+        .status-deleted {
+            color: #888;
+            font-weight: bold;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -252,8 +262,24 @@
                 {% for c in complaints %}
                 <tr onclick="selectComplaintRow(this)">
                     <td>{{ c.id }}</td>
-                    <td>{{ c.username }}</td>
-                    <td>{{ c.email }}</td>
+                    <td>
+                        {% if c.username == 'Пользователь не найден' %}
+                            <span class="status-missing">{{ c.username }}</span>
+                        {% elif c.username == 'Пользователь удалён' %}
+                            <span class="status-deleted">{{ c.username }}</span>
+                        {% else %}
+                            {{ c.username }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.email == 'Пользователь не найден' %}
+                            <span class="status-missing">{{ c.email }}</span>
+                        {% elif c.email == 'Пользователь удалён' %}
+                            <span class="status-deleted">{{ c.email }}</span>
+                        {% else %}
+                            {{ c.email }}
+                        {% endif %}
+                    </td>
                     <td>{{ c.description }}</td>
                     <td>{{ c.object }}</td>
                     <td>
@@ -398,8 +424,34 @@
         document.getElementById('blockModal').classList.remove('active');
     }
     function confirmBlock() {
+        // Получаем user_id из модального окна жалобы
+        let userId = document.getElementById('complaintId').innerText.trim();
         closeBlockModal();
-        alert('Пользователь заблокирован (заглушка)');
+        if (!userId || isNaN(userId) || Number(userId) <= 0) {
+            alert('Некорректный ID пользователя для удаления!');
+            return;
+        }
+        if (!confirm('Вы уверены, что хотите удалить пользователя с id ' + userId + '?')) return;
+        fetch(`/adminpanel/users/${userId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Ошибка удаления');
+                });
+            }
+            alert('Пользователь успешно удалён! Страница будет обновлена.');
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Ошибка при удалении: ' + error.message);
+        });
     }
     function openRestrictModal() {
         closeComplaintModal();
