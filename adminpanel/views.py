@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from django.contrib import messages # Для отображения сообщений
 import requests
 from django.views.decorators.csrf import csrf_exempt
+import json
+import sys
 
 API_URL = "http://185.185.71.233"
 
@@ -58,21 +60,32 @@ def users_list(request):
         response = requests.get(f"{API_URL}/api/reports/admin/users/", headers=headers)
         response.raise_for_status()
         users = response.json() if response.status_code == 200 else []
+        # Приводим к нужному формату для таблицы и модалки
+        users_for_table = []
+        for u in users:
+            users_for_table.append({
+                'id': u.get('id', ''),
+                'username': u.get('username', ''),
+                'email': u.get('email', ''),
+                'is_admin': 'yes' if u.get('is_admin') else 'no',
+                'is_premium': 'yes' if u.get('is_premium') else 'no',
+                'is_blocked': 'yes' if u.get('is_blocked') else 'no',
+            })
     except requests.exceptions.HTTPError as e:
-        users = []
+        users_for_table = []
         if e.response.status_code == 401:
             messages.error(request, "Сессия истекла или недействительна. Пожалуйста, войдите снова.")
             return redirect('admin_logout')
         else:
             messages.error(request, f"Ошибка API при получении пользователей: {e.response.status_code} - {e.response.text}")
     except requests.exceptions.RequestException as e:
-        users = []
+        users_for_table = []
         messages.error(request, f"Сетевая ошибка при получении пользователей: {e}")
     except ValueError:
-        users = []
+        users_for_table = []
         messages.error(request, "Неверный формат ответа от API пользователей.")
         
-    return render(request, 'adminpanel/users.html', {'users': users})
+    return render(request, 'adminpanel/users.html', {'users': users_for_table})
 
 @admin_auth_required
 def complaints_list(request):
@@ -103,6 +116,8 @@ def complaints_list(request):
         response.raise_for_status()
         data = response.json()
         for report in data.get('user_reports', []):
+            if report.get('is_resolved'):
+                continue
             user_id = str(report.get('reported_user'))
             user_info = users_dict.get(user_id)
             if user_info:
@@ -128,14 +143,29 @@ def complaints_list(request):
                 'reporter_id': report.get('reporter')
             })
         for report in data.get('state_reports', []):
+            if report.get('is_resolved'):
+                continue
+            state_id = report.get('state')
+            state_details = {}
+            try:
+                state_resp = requests.get(f"{API_URL}/api/reports/admin/state/{state_id}/details/", headers=headers)
+                state_resp.raise_for_status()
+                state_details = state_resp.json()
+            except Exception:
+                state_details = {}
+            card_text = state_details.get('description', 'Текст карточки не найден')
+            complaint_text = report.get('reason', 'Текст жалобы не найден')
+            description = f'"{card_text}" - "{complaint_text}"'
+            username = state_details.get('username', '')
+            email = state_details.get('email', '')
             all_complaints_data.append({
                 'id': report.get('id'),
                 'type': 'state_report',
-                'state_id': report.get('state'),
-                'username': '',
-                'email': '',
-                'description': report.get('reason'),
-                'object': f"Жалоба на карточку (ID: {report.get('state')})",
+                'state_id': state_id,
+                'username': username,
+                'email': email,
+                'description': description,
+                'object': f"Жалоба на карточку (ID: {state_id})",
                 'created_at': report.get('created_at'),
                 'is_resolved': report.get('is_resolved'),
                 'is_accepted': report.get('is_accepted'),
@@ -177,72 +207,91 @@ def delete_user(request, user_id):
             return JsonResponse({'success': False, 'error': f'Ошибка сети: {str(e)}'}, status=500)
     return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
 
+@csrf_exempt
 @admin_auth_required
-def resolve_user_report(request, report_id): # report_id - это ID жалобы на пользователя
-    access_token = request.session.get('admin_access_token')
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-        'Content-Type': 'application/json' # Важно для отправки JSON
-    }
-    if request.method == "POST":
-        # Фронтенд отправляет "accept" как строку "true" или "false" в POST-данных, не JSON
-        # API ожидает JSON: {"accept": true/false}
-        try:
-            accept_str = request.POST.get("accept") # Получаем из POST-данных формы
-            if accept_str not in ["true", "false"]:
-                return JsonResponse({'success': False, 'error': 'Неверное значение для параметра "accept".'}, status=400)
-            accept = accept_str == "true" # Преобразуем строку в boolean
-            
-            # Используем report_id в URL
-            response = requests.post(
-                f"{API_URL}/api/admin/user/{report_id}/resolve/", 
-                json={"accept": accept}, # Отправляем JSON в теле запроса
-                headers=headers
-            )
-            response.raise_for_status()
-            messages.success(request, f"Жалоба (ID: {report_id}) на пользователя обработана.")
-            return JsonResponse(response.json(), status=response.status_code)
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                return JsonResponse({'success': False, 'error': 'Не авторизован. Пожалуйста, войдите снова.'}, status=401)
-            return JsonResponse({'success': False, 'error': str(e)}, status=e.response.status_code)
-        except requests.exceptions.RequestException as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
-        except Exception as e: # Ловим другие возможные ошибки, например, если request.POST.get отсутствует
-            return JsonResponse({'success': False, 'error': f'Внутренняя ошибка: {str(e)}'}, status=500)
-
-    return JsonResponse({'success': False, 'error': 'Неверный метод запроса.'}, status=405)
-
-@admin_auth_required
-def resolve_state_report(request, report_id): # report_id - это ID жалобы на карточку
-    access_token = request.session.get('admin_access_token')
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-        'Content-Type': 'application/json'
-    }
+def resolve_user_report(request, report_id):
+    access_token = request.COOKIES.get('admin_access_token')
+    headers = {'Authorization': f'Bearer {access_token}'}
     if request.method == "POST":
         try:
-            accept_str = request.POST.get("accept")
-            if accept_str not in ["true", "false"]:
-                 return JsonResponse({'success': False, 'error': 'Неверное значение для параметра "accept".'}, status=400)
-            accept = accept_str == "true"
-
-            # Используем report_id в URL
             response = requests.post(
-                f"{API_URL}/api/admin/state/{report_id}/resolve/", 
-                json={"accept": accept},
+                f"{API_URL}/api/reports/admin/user/{report_id}/resolve/",
+                json={"accept": True},
                 headers=headers
             )
-            response.raise_for_status()
-            messages.success(request, f"Жалоба (ID: {report_id}) на карточку обработана.")
-            return JsonResponse(response.json(), status=response.status_code)
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                return JsonResponse({'success': False, 'error': 'Не авторизован. Пожалуйста, войдите снова.'}, status=401)
-            return JsonResponse({'success': False, 'error': str(e)}, status=e.response.status_code)
-        except requests.exceptions.RequestException as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+            if response.status_code in (200, 204):
+                return JsonResponse({'success': True}, status=200)
+            return JsonResponse({'success': False, 'error': response.text}, status=response.status_code)
         except Exception as e:
-            return JsonResponse({'success': False, 'error': f'Внутренняя ошибка: {str(e)}'}, status=500)
-            
-    return JsonResponse({'success': False, 'error': 'Неверный метод запроса.'}, status=405)
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
+
+@csrf_exempt
+@admin_auth_required
+def resolve_state_report(request, report_id):
+    access_token = request.COOKIES.get('admin_access_token')
+    headers = {'Authorization': f'Bearer {access_token}'}
+    if request.method == "POST":
+        try:
+            response = requests.post(
+                f"{API_URL}/api/reports/admin/state/{report_id}/resolve/",
+                json={"accept": True},
+                headers=headers
+            )
+            if response.status_code in (200, 204):
+                return JsonResponse({'success': True}, status=200)
+            return JsonResponse({'success': False, 'error': response.text}, status=response.status_code)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
+
+@admin_auth_required
+def user_details_proxy(request, user_id):
+    api_url = f'http://185.185.71.233/api/reports/admin/state/{user_id}/details/'
+    try:
+        resp = requests.get(api_url)
+        return JsonResponse(resp.json(), status=resp.status_code)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@admin_auth_required
+def edit_user_field(request, user_id):
+    if request.method not in ['PATCH', 'POST']:
+        return JsonResponse({'success': False, 'error': 'Метод не поддерживается'}, status=405)
+    access_token = request.COOKIES.get('admin_access_token')
+    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
+    try:
+        if request.method == 'PATCH':
+            data = json.loads(request.body.decode('utf-8'))
+        else:  # POST
+            content_type = request.headers.get('Content-Type', '')
+            if 'application/json' in content_type:
+                data = json.loads(request.body.decode('utf-8'))
+            else:
+                data = request.POST.dict()
+        if not data:
+            return JsonResponse({'success': False, 'error': 'Не переданы данные для редактирования'}, status=400)
+        # Определяем, какое поле редактируется
+        field = None
+        if 'username' in data:
+            field = 'username'
+        elif 'is_blocked' in data:
+            field = 'is_blocked'
+        elif 'is_admin' in data:
+            field = 'is_admin'
+        if not field:
+            return JsonResponse({'success': False, 'error': 'Неизвестное поле для редактирования'}, status=400)
+        # Отправляем запрос на соответствующий эндпоинт
+        resp = requests.patch(
+            f"{API_URL}/api/reports/admin/user/{user_id}/edit/{field}/",
+            headers=headers,
+            json={field: data[field]}
+        )
+        if resp.status_code == 200:
+            return JsonResponse({'success': True, 'data': resp.json()})
+        return JsonResponse({'success': False, 'error': resp.text}, status=resp.status_code)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Неверный формат JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

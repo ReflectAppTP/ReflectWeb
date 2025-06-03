@@ -247,6 +247,7 @@
             <input type="text" id="complaintSearch" placeholder="Поиск" oninput="searchComplaints()" style="flex:1;">
             <img src="{% static 'adminpanel/cleansearch.svg' %}" alt="clear" style="width:24px;height:24px;cursor:pointer;margin-left:8px;opacity:0.7;" onclick="clearComplaintSearch()">
         </div>
+        <input type="hidden" id="currentComplaintId">
         <table class="complaints-table" id="complaintsTable">
             <thead>
                 <tr>
@@ -285,7 +286,7 @@
                     <td>
                         <div class="action-btns">
                             <img src="{% static 'adminpanel/pencil.png' %}" alt="edit" title="Подробнее" onclick="openComplaintModal(this);event.stopPropagation();">
-                            <img src="{% static 'adminpanel/trash-2.png' %}" alt="delete" title="Удалить" onclick="openDeleteComplaintModal();event.stopPropagation();">
+                            <img src="{% static 'adminpanel/trash-2.png' %}" alt="delete" title="Удалить" onclick="deleteComplaint('{{ c.type }}', '{{ c.id }}');event.stopPropagation();">
                         </div>
                     </td>
                 </tr>
@@ -407,6 +408,7 @@
         let tds = tr.getElementsByTagName('td');
         document.getElementById('complaintModalTitle').innerText = 'Пользователь: ' + tds[1].innerText;
         document.getElementById('complaintId').innerText = tds[0].innerText;
+        document.getElementById('currentComplaintId').value = tds[0].innerText;
         document.getElementById('complaintUsername').innerText = tds[1].innerText;
         document.getElementById('complaintEmail').innerText = tds[2].innerText;
         document.getElementById('complaintDescription').innerText = tds[3].innerText;
@@ -424,33 +426,29 @@
         document.getElementById('blockModal').classList.remove('active');
     }
     function confirmBlock() {
-        // Получаем user_id из модального окна жалобы
-        let userId = document.getElementById('complaintId').innerText.trim();
+        let reportId = document.getElementById('currentComplaintId').value;
         closeBlockModal();
-        if (!userId || isNaN(userId) || Number(userId) <= 0) {
-            alert('Некорректный ID пользователя для удаления!');
+        if (!reportId) {
+            alert('Некорректный ID жалобы!');
             return;
         }
-        if (!confirm('Вы уверены, что хотите удалить пользователя с id ' + userId + '?')) return;
-        fetch(`/adminpanel/users/${userId}/delete/`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+        fetch(`/adminpanel/complaints/user/${reportId}/resolve/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accept: true }),
             credentials: 'same-origin'
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || 'Ошибка удаления');
-                });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Пользователь успешно заблокирован! Страница будет обновлена.');
+                location.reload();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Не удалось заблокировать пользователя'));
             }
-            alert('Пользователь успешно удалён! Страница будет обновлена.');
-            location.reload();
         })
         .catch(error => {
-            console.error('Ошибка:', error);
-            alert('Ошибка при удалении: ' + error.message);
+            alert('Ошибка: ' + error.message);
         });
     }
     function openRestrictModal() {
@@ -510,6 +508,27 @@
             return;
         }
         td.innerText = value;
+    }
+    function deleteComplaint(type, reportId) {
+        let url = '';
+        if (type === 'user_report') {
+            url = `/adminpanel/complaints/user/${reportId}/resolve/`;
+        } else if (type === 'state_report') {
+            url = `/adminpanel/complaints/state/${reportId}/resolve/`;
+        }
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'accept=true'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Не удалось удалить жалобу'));
+            }
+        });
     }
 </script>
 </body>

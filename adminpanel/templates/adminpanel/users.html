@@ -199,52 +199,38 @@
         .user-modal-table tr {
             border-bottom: 1px solid #fff3;
         }
-        .user-modal-table td {
-            padding: 8px 0;
-            border: none;
+        .user-modal-table th, .user-modal-table td {
+            padding: 8px 12px;
+            text-align: left;
         }
-        .user-modal-table .row-flex {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            width: 100%;
+        .user-modal-table th {
+            font-weight: 600;
         }
-        .user-modal-table .row-label {
-            min-width: 120px;
-            color: #e0e0e0;
-            flex-shrink: 0;
-        }
-        .user-modal-table .row-value {
-            flex: 1 1 auto;
-            min-width: 80px;
-            color: #fff;
-            word-break: break-all;
-        }
-        .user-modal-table .row-edit {
-            width: 16px;
-            min-width: 16px;
-            max-width: 16px;
+        .user-modal-table td:last-child {
             text-align: right;
         }
-        .user-modal-table .row-edit img {
-            width: 16px;
-            height: 16px;
+        .user-modal-table .action-btns img {
+            width: 22px;
+            height: 22px;
+        }
+        .editable {
             cursor: pointer;
-            opacity: 0.85;
-            transition: opacity 0.2s;
+            position: relative;
         }
-        .user-modal-table .row-edit img:hover {
-            opacity: 1;
+        .editable:hover::after { display: none !important; content: none !important; }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: bold;
         }
-        .user-modal-table input {
-            width: 100%;
-            min-width: 80px;
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1.5px solid #b2d8b2;
-            font-size: 1.1rem;
-            box-sizing: border-box;
-            color: #222;
+        .status-admin {
+            background: #4CAF50;
+            color: white;
+        }
+        .status-blocked {
+            background: #f44336;
+            color: white;
         }
         .users-table tr:hover {
             background: #eafbe6;
@@ -269,6 +255,86 @@
         }
         .user-modal-table .delete-btn:hover {
             opacity: 1;
+        }
+        .user-modal-modern {
+            position: relative;
+            min-width: 380px;
+            max-width: 98vw;
+            background: #40603C;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            padding: 36px 32px 32px 32px;
+            color: #fff;
+            text-align: left;
+        }
+        .user-modal-modern .close-btn {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 2.2rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            z-index: 2;
+        }
+        .user-modal-modern .close-btn:hover {
+            opacity: 1;
+        }
+        .user-modal-modern h2 {
+            margin: 0 0 24px 0;
+            font-size: 2.1rem;
+            text-align: center;
+        }
+        .user-modal-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .user-modal-row {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            border-bottom: 1px solid #fff3;
+            padding-bottom: 7px;
+        }
+        .user-modal-label {
+            min-width: 120px;
+            color: #e0e0e0;
+            font-size: 1.08rem;
+            flex-shrink: 0;
+        }
+        .user-modal-value {
+            flex: 1 1 auto;
+            font-size: 1.13rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            word-break: break-all;
+        }
+        .edit-pencil {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            opacity: 0.7;
+            margin-left: 6px;
+            transition: opacity 0.2s;
+        }
+        .edit-pencil:hover {
+            opacity: 1;
+        }
+        .user-modal-value input, .user-modal-value select {
+            width: 100%;
+            min-width: 80px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1.5px solid #b2d8b2;
+            font-size: 1.1rem;
+            box-sizing: border-box;
+            color: #222;
         }
     </style>
 </head>
@@ -296,7 +362,9 @@
                     <th onclick="sortTable(0)">ID</th>
                     <th onclick="sortTable(1)">UserName</th>
                     <th onclick="sortTable(2)">Email</th>
-                    <th onclick="sortTable(3)">Last login</th>
+                    <th style="display:none">is_admin</th>
+                    <th style="display:none">is_premium</th>
+                    <th style="display:none">is_blocked</th>
                     <th></th>
                 </tr>
             </thead>
@@ -306,7 +374,9 @@
                     <td>{{ user.id }}</td>
                     <td>{{ user.username }}</td>
                     <td>{{ user.email }}</td>
-                    <td>{{ user.last_login }}</td>
+                    <td style="display:none">{{ user.is_admin }}</td>
+                    <td style="display:none">{{ user.is_premium }}</td>
+                    <td style="display:none">{{ user.is_blocked }}</td>
                     <td>
                         <div class="action-btns">
                             <img src="{% static 'adminpanel/pencil.png' %}" alt="edit" title="Редактировать" onclick="openUserModal(this);event.stopPropagation();">
@@ -337,15 +407,12 @@
     <div class="modal-content">
         <h2 id="userModalTitle">Пользователь: </h2>
         <table class="user-modal-table" id="userModalTable">
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">id</span><span class="row-value" id="userModalId"></span><span class="row-edit"></span></div></td></tr>
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">email</span><span class="row-value" id="userModalEmail"></span><span class="row-edit"></span></div></td></tr>
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">username</span><span class="row-value" id="userModalUsername"></span><span class="row-edit"><img src="{% static 'adminpanel/pencil_w.svg' %}" alt="edit" onclick="editField(this)"></span></div></td></tr>
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">password</span><span class="row-value" id="userModalPassword">romanromanin228</span><span class="row-edit"></span></div></td></tr>
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">created</span><span class="row-value" id="userModalCreated">00.00.0000 00:00</span><span class="row-edit"></span></div></td></tr>
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">last_login</span><span class="row-value" id="userModalLastLogin"></span><span class="row-edit"></span></div></td></tr>
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">is_admin</span><span class="row-value" id="userModalIsAdmin">no</span><span class="row-edit"><img src="{% static 'adminpanel/pencil_w.svg' %}" alt="edit" onclick="editField(this)"></span></div></td></tr>
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">is_premium</span><span class="row-value" id="userModalIsPremium">yes</span><span class="row-edit"></span></div></td></tr>
-            <tr><td colspan="3"><div class="row-flex"><span class="row-label">is_blocked</span><span class="row-value" id="userModalIsBlocked">yes</span><span class="row-edit"><img src="{% static 'adminpanel/pencil_w.svg' %}" alt="edit" onclick="editField(this)"></span></div></td></tr>
+            <tr><td>id</td><td id="userModalId"></td></tr>
+            <tr><td>email</td><td id="userModalEmail"></td></tr>
+            <tr><td>username</td><td class="editable" id="userModalUsername"><span id="userModalUsernameText"></span><img src="{% static 'adminpanel/pencil_w.svg' %}" class="edit-pencil" alt="edit" onclick="editUserField(this)"></td></tr>
+            <tr><td>is_admin</td><td class="editable" id="userModalIsAdmin"><span id="userModalIsAdminText"></span><img src="{% static 'adminpanel/pencil_w.svg' %}" class="edit-pencil" alt="edit" onclick="editSelectField(this, 'is_admin')"></td></tr>
+            <tr><td>is_premium</td><td id="userModalIsPremium"></td></tr>
+            <tr><td>is_blocked</td><td class="editable" id="userModalIsBlocked"><span id="userModalIsBlockedText"></span><img src="{% static 'adminpanel/pencil_w.svg' %}" class="edit-pencil" alt="edit" onclick="editSelectField(this, 'is_blocked')"></td></tr>
         </table>
     </div>
 </div>
@@ -411,13 +478,43 @@
     }
     function openUserModal(btn) {
         let tr = btn.closest('tr');
-        lastEditedRow = tr;
         let tds = tr.getElementsByTagName('td');
-        document.getElementById('userModalTitle').innerText = 'Пользователь: ' + tds[1].innerText;
-        document.getElementById('userModalId').innerText = tds[0].innerText;
-        document.getElementById('userModalUsername').innerText = tds[1].innerText;
-        document.getElementById('userModalEmail').innerText = tds[2].innerText;
-        document.getElementById('userModalLastLogin').innerText = tds[3].innerText;
+        const userId = tds[0].innerText.trim();
+        // Найти пользователя по id в списке users (из таблицы)
+        let user = null;
+        try {
+            const allRows = document.querySelectorAll('#usersTbody tr');
+            for (let row of allRows) {
+                const cells = row.getElementsByTagName('td');
+                if (cells[0] && cells[0].innerText.trim() === userId) {
+                    user = {
+                        id: cells[0].innerText.trim(),
+                        username: cells[1].innerText.trim(),
+                        email: cells[2].innerText.trim(),
+                        is_admin: cells[3] ? cells[3].innerText.trim() : '',
+                        is_premium: cells[4] ? cells[4].innerText.trim() : '',
+                        is_blocked: cells[5] ? cells[5].innerText.trim() : ''
+                    };
+                    break;
+                }
+            }
+        } catch (e) { user = null; }
+        // Приводим значения к true/false
+        function toBoolStr(val) {
+            if (typeof val === 'boolean') return val ? 'true' : 'false';
+            if (val === undefined || val === null) return '';
+            let v = val.toString().toLowerCase();
+            if (v === 'yes' || v === 'true' || v === '1') return 'true';
+            if (v === 'no' || v === 'false' || v === '0') return 'false';
+            return v;
+        }
+        document.getElementById('userModalTitle').innerText = 'Пользователь: ' + (user && user.username ? user.username : '');
+        document.getElementById('userModalId').innerText = user && user.id ? user.id : '';
+        document.getElementById('userModalEmail').innerText = user && user.email ? user.email : '';
+        document.getElementById('userModalUsernameText').innerText = user && user.username ? user.username : '';
+        document.getElementById('userModalIsAdminText').innerText = user && user.is_admin !== undefined ? toBoolStr(user.is_admin) : '';
+        document.getElementById('userModalIsPremium').innerText = user && user.is_premium !== undefined ? toBoolStr(user.is_premium) : '';
+        document.getElementById('userModalIsBlockedText').innerText = user && user.is_blocked !== undefined ? toBoolStr(user.is_blocked) : '';
         document.getElementById('userModal').classList.add('active');
     }
     function closeUserModal() {
@@ -431,41 +528,144 @@
         if (event.target === userModal) closeUserModal();
     }
     // --- Инлайн-редактирование с валидацией ---
-    let lastEditedRow = null;
-    function editField(btn) {
-        let td = btn.parentElement.previousElementSibling;
-        if (td.querySelector('input')) return;
-        let oldValue = td.innerText;
-        let type = td.id && td.id.toLowerCase().includes('email') ? 'email' : 'text';
-        td.innerHTML = `<input type='${type}' value='${oldValue}' onkeydown='if(event.key==="Enter"){saveField(this)}'>`;
-        let input = td.querySelector('input');
+    function editUserField(pencil) {
+        const td = pencil.parentElement;
+        const span = td.querySelector('span');
+        if (!span) return;
+        const oldValue = span.innerText;
+        if (td.querySelector('input[type=text]')) return;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = oldValue;
+        input.style.width = '70%';
+        span.style.display = 'none';
+        td.insertBefore(input, pencil);
         input.focus();
-        input.onblur = function() { saveField(this); };
+        input.onblur = function() {
+            const userId = document.getElementById('userModalId').innerText.trim();
+            const value = input.value.trim();
+            if (!value) {
+                input.style.border = '2px solid #ff5555';
+                input.placeholder = 'Поле не может быть пустым';
+                input.focus();
+                return;
+            }
+            fetch(`/adminpanel/users/${userId}/edit/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    span.innerText = value;
+                    span.style.display = '';
+                    input.remove();
+                    // Обновить в таблице
+                    updateTableValue(userId, 1, value);
+                    alert('Имя пользователя успешно изменено!');
+                } else {
+                    throw new Error(data.error || 'Ошибка при изменении имени');
+                }
+            })
+            .catch(error => {
+                span.style.display = '';
+                input.remove();
+                alert('Ошибка: ' + error.message);
+            });
+        };
     }
-    function saveField(input) {
-        let value = input.value.trim();
-        let td = input.parentElement;
-        let isEmail = input.type === 'email' || td.id && td.id.toLowerCase().includes('email');
-        if (!value) {
-            input.style.border = '2px solid #ff5555';
-            input.placeholder = 'Поле не может быть пустым';
-            input.focus();
-            return;
+    function editSelectField(pencil, field) {
+        const td = pencil.parentElement;
+        const span = td.querySelector('span');
+        if (!span) return;
+        const oldValue = span.innerText.trim().toLowerCase();
+        if (td.querySelector('input[type=radio]')) return;
+        // Создаём radio-group
+        const radioTrue = document.createElement('input');
+        radioTrue.type = 'radio';
+        radioTrue.name = 'radio_' + field + '_' + Math.random();
+        radioTrue.value = 'true';
+        radioTrue.id = 'radio_' + field + '_true_' + Math.random();
+        const labelTrue = document.createElement('label');
+        labelTrue.innerText = 'true';
+        labelTrue.htmlFor = radioTrue.id;
+        const radioFalse = document.createElement('input');
+        radioFalse.type = 'radio';
+        radioFalse.name = radioTrue.name;
+        radioFalse.value = 'false';
+        radioFalse.id = 'radio_' + field + '_false_' + Math.random();
+        const labelFalse = document.createElement('label');
+        labelFalse.innerText = 'false';
+        labelFalse.htmlFor = radioFalse.id;
+        if (oldValue === 'yes' || oldValue === 'true') {
+            radioTrue.checked = true;
+        } else {
+            radioFalse.checked = true;
         }
-        if (isEmail && !/^\S+@\S+\.\S+$/.test(value)) {
-            input.style.border = '2px solid #ff5555';
-            input.value = '';
-            input.placeholder = 'Некорректный email';
-            input.focus();
-            return;
+        span.style.display = 'none';
+        // Вставляем после span (то есть после значения)
+        td.insertBefore(radioTrue, pencil.nextSibling);
+        td.insertBefore(labelTrue, pencil.nextSibling);
+        td.insertBefore(radioFalse, pencil.nextSibling);
+        td.insertBefore(labelFalse, pencil.nextSibling);
+        // Обработчик сохранения
+        function saveRadio() {
+            const userId = document.getElementById('userModalId').innerText.trim();
+            const value = radioTrue.checked;
+            fetch(`/adminpanel/users/${userId}/edit/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ [field]: value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    span.innerText = value ? 'true' : 'false';
+                    span.style.display = '';
+                    radioTrue.remove();
+                    labelTrue.remove();
+                    radioFalse.remove();
+                    labelFalse.remove();
+                    // Обновить в таблице
+                    updateTableValue(userId, field === 'is_admin' ? 3 : 5, value ? 'true' : 'false');
+                    alert('Значение успешно изменено!');
+                } else {
+                    throw new Error(data.error || 'Ошибка при изменении поля');
+                }
+            })
+            .catch(error => {
+                span.style.display = '';
+                radioTrue.remove();
+                labelTrue.remove();
+                radioFalse.remove();
+                labelFalse.remove();
+                alert('Ошибка: ' + error.message);
+            });
         }
-        td.innerText = value;
-        // Обновляем строку таблицы, если модалка открыта для пользователя
-        if (lastEditedRow) {
-            if (td.id === 'userModalId') lastEditedRow.children[0].innerText = value;
-            if (td.id === 'userModalUsername') lastEditedRow.children[1].innerText = value;
-            if (td.id === 'userModalEmail') lastEditedRow.children[2].innerText = value;
-            if (td.id === 'userModalLastLogin') lastEditedRow.children[3].innerText = value;
+        radioTrue.onchange = saveRadio;
+        radioFalse.onchange = saveRadio;
+        radioTrue.onblur = radioFalse.onblur = function() {
+            setTimeout(() => {
+                if (!td.contains(document.activeElement)) {
+                    span.style.display = '';
+                    radioTrue.remove();
+                    labelTrue.remove();
+                    radioFalse.remove();
+                    labelFalse.remove();
+                }
+            }, 200);
+        };
+        radioTrue.focus();
+    }
+    function updateTableValue(userId, colIdx, value) {
+        const allRows = document.querySelectorAll('#usersTbody tr');
+        for (let row of allRows) {
+            const cells = row.getElementsByTagName('td');
+            if (cells[0] && cells[0].innerText.trim() === userId) {
+                if (cells[colIdx]) cells[colIdx].innerText = value;
+                break;
+            }
         }
     }
     function selectRow(row) {
