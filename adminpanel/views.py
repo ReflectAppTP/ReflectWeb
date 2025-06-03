@@ -35,7 +35,7 @@ def admin_login(request):
                     data = response.json()
                     access_token = data.get('access')
                     if access_token:
-                        resp = redirect('users_list')
+                        resp = redirect('/adminpanel/users/')
                         resp.set_cookie('admin_access_token', access_token, max_age=86400)
                         return resp
                     else:

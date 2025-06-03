@@ -17,7 +17,7 @@ DATABASES = {
 }
 
 # Настройки статических файлов
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = BASE_DIR / 'static'
 STATIC_URL = '/static/'
 
 # Настройки безопасности
