@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import sys
 
-API_URL = "http://web:8000"
+API_URL = "https://reflect-app.ru"
 
 # Декоратор для проверки, аутентифицирован ли администратор
 def admin_auth_required(view_func):
