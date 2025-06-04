@@ -2,7 +2,7 @@ from .settings import *
 
 DEBUG = False
 
-ALLOWED_HOSTS = ['reflect-app.ru', 'www.reflect-app.ru', '185.185.71.233']
+ALLOWED_HOSTS = ['reflect-app.ru', 'www.reflect-app.ru', '185.185.71.233', 'web']
 
 # Настройки базы данных PostgreSQL
 DATABASES = {
