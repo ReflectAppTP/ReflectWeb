@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import sys
 
-API_URL = "http://185.185.71.233"
+API_URL = "https://reflect-app.ru"
 
 # Декоратор для проверки, аутентифицирован ли администратор
 def admin_auth_required(view_func):
@@ -247,7 +247,7 @@ def resolve_state_report(request, report_id):
 
 @admin_auth_required
 def user_details_proxy(request, user_id):
-    api_url = f'http://185.185.71.233/api/reports/admin/state/{user_id}/details/'
+    api_url = f'https://reflect-app.ru/api/reports/admin/state/{user_id}/details/'
     try:
         resp = requests.get(api_url)
         return JsonResponse(resp.json(), status=resp.status_code)
