@@ -27,6 +27,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['185.185.71.233', 'reflect-app.ru', 'www.reflect-app.ru']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://reflect-app.ru',
+    'https://www.reflect-app.ru',
+]
 
 # Application definition
 
